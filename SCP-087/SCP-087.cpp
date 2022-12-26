@@ -18,8 +18,6 @@ Shader pixelizer_shader;
 Shader bloom_shader;
 Shader open_ai_shader;
 
-float last_x = 0;
-
 void RenderChunk(const float& camera_x, float offset, Model &floor, Model &wall, Model &ceiling)
 {
     // Floor
@@ -51,28 +49,41 @@ void RenderMultipleChunks(const float& camera_x, Model& floor, Model& wall, Mode
     RenderChunk(camera_x, chunk_pos, floor, wall, ceiling);
     RenderChunk(camera_x, chunk_pos + 5.0f, floor, wall, ceiling);
     RenderChunk(camera_x, chunk_pos + 10.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos + 15.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos + 20.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos + 25.0f, floor, wall, ceiling);
     RenderChunk(camera_x, chunk_pos - 5.0f, floor, wall, ceiling);
     RenderChunk(camera_x, chunk_pos - 10.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos - 15.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos - 20.0f, floor, wall, ceiling);
+    RenderChunk(camera_x, chunk_pos - 25.0f, floor, wall, ceiling);
 }
 
-float step_pitch, step_volume;
 bool pixelizer_shader_enabled = true;
+float max_depth = 0.0f;
+
+float bg_volume = 0.0f;
+
+bool depth_reached_10 = false;
+bool depth_reached_20 = false;
+bool depth_reached_30 = false;
+bool depth_reached_40 = false;
 
 int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    int screen_width = 640;
-    int screen_height = 360;
+    int screen_width = 1280;
+    int screen_height = 720;
 
     //SetConfigFlags(FLAG_VSYNC_HINT);
     SetConfigFlags(FLAG_MSAA_4X_HINT);  // Enable Multi Sampling Anti Aliasing 4x (if available)
     InitWindow(screen_width, screen_height, "SCP-087");
     int current_monitor = GetCurrentMonitor();
-    screen_width = GetMonitorWidth(current_monitor);
-    screen_height = GetMonitorHeight(current_monitor);
+    //screen_width = GetMonitorWidth(current_monitor);
+    //screen_height = GetMonitorHeight(current_monitor);
     SetWindowSize(screen_width, screen_height);
-    ToggleFullscreen();
+    //ToggleFullscreen();
 
     // Define the camera to look into our 3d world
     Camera3D camera = { 0 };
@@ -97,7 +108,7 @@ int main(void)
     // Init sounds
     InitAudioDevice();
     Sound step = LoadSound("sounds/step_reverb.wav");
-    Music bg = LoadMusicStream("sounds/bg.mp3");
+    Music bg = LoadMusicStream("sounds/bg_short.mp3");
 
     // Floor piece
     Model floor = LoadModelFromMesh(GenMeshCube(0.5f, 0.5f, 3.0f));
@@ -123,8 +134,8 @@ int main(void)
     //float values[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
     SetShaderValue(light_shader, ambientLoc, (const void*)(&values), SHADER_UNIFORM_VEC4);
 
-    float fogDensity = 0.2f;
     int fogDensityLoc = GetShaderLocation(light_shader, "fogDensity");
+    float fogDensity = 0.2f;
     SetShaderValue(light_shader, fogDensityLoc, &fogDensity, SHADER_UNIFORM_FLOAT);
 
     // Create lights
@@ -154,6 +165,59 @@ int main(void)
         if (camera.position.x < 0)
             camera.position.x = 0;
 
+        // Max depth player reached
+        if (camera.position.x > max_depth)
+            max_depth = camera.position.x;
+
+        // Depth events
+        if (camera.position.x > 1000)
+            lights[0].color.r = 255;
+        else
+            lights[0].color.r = (unsigned char)Map(camera.position.x, 0, 1000, 20, 255);
+
+        if (camera.position.x > 1000)
+            fogDensity = 0.7f;
+        else
+            fogDensity = Map(camera.position.x, 0, 1000, 0.04f, 0.7f);
+        SetShaderValue(light_shader, fogDensityLoc, &fogDensity, SHADER_UNIFORM_FLOAT);
+
+        if (camera.position.x > 100)
+        {
+            bg_volume = 3.0f;
+        }
+        else
+            bg_volume = Map(camera.position.x, 0, 100, 0.0f, 3.0f);
+        SetMusicVolume(bg, bg_volume);
+
+        /*if (max_depth > 10.0f && !depth_reached_10)
+        {
+            lights[0].color.r += 2;
+            lights[0].color.g -= 2;
+            lights[0].color.b -= 2;
+            depth_reached_10 = true;
+        }
+        if (max_depth > 20.0f && !depth_reached_20)
+        {
+            lights[0].color.r += 2;
+            lights[0].color.g -= 2;
+            lights[0].color.b -= 2;
+            depth_reached_20 = true;
+        }
+        if (max_depth > 30.0f && !depth_reached_30)
+        {
+            lights[0].color.r += 2;
+            lights[0].color.g -= 2;
+            lights[0].color.b -= 2;
+            depth_reached_30 = true;
+        }
+        if (max_depth > 40.0f && !depth_reached_40)
+        {
+            lights[0].color.r += 2;
+            lights[0].color.g -= 2;
+            lights[0].color.b -= 2;
+            depth_reached_40 = true;
+        }*/
+
         // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
         float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
         SetShaderValue(light_shader, light_shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
@@ -167,10 +231,8 @@ int main(void)
         // Walking sounds
         if ((IsKeyDown(KEY_W) || IsKeyDown(KEY_A) || IsKeyDown(KEY_S) || IsKeyDown(KEY_D)) && !IsSoundPlaying(step))
         {
-            step_pitch = (float)GetRandomValue(60, 70) / 150;
-            step_volume = (float)GetRandomValue(20, 40) / 150;
-            SetSoundPitch(step, step_pitch);
-            SetSoundVolume(step, step_volume);
+            SetSoundPitch(step, (float)GetRandomValue(60, 70) / 150);
+            SetSoundVolume(step, (float)GetRandomValue(20, 40) / 150);
             PlaySound(step);
         }
 
@@ -178,7 +240,6 @@ int main(void)
         UpdateMusicStream(bg);
         if (!IsMusicStreamPlaying(bg))
         {
-            SetMusicVolume(bg, 0.2f);
             PlayMusicStream(bg);
         }
 
@@ -213,9 +274,10 @@ int main(void)
                 DrawTextureRec(target.texture, { 0, 0, (float)target.texture.width, (float)-target.texture.height }, { 0, 0 }, WHITE);
             EndShaderMode();
             DrawFPS(10, 10);
-            DrawText(TextFormat("x%f y%f z%f", camera.position.x, camera.position.y, camera.position.z), 20, 40, 20, GREEN);
-            DrawText(TextFormat("F - Enable/disable lighting shader"), 20, 60, 20, GREEN);
-            DrawText(TextFormat("G - Enable/disable pixelizer shader"), 20, 80, 20, GREEN);
+            DrawText(TextFormat("X: %f Y: %f Z: %f", camera.position.x, camera.position.y, camera.position.z), 20, 40, 20, GREEN);
+            DrawText(TextFormat("Max depth: %f", max_depth), 20, 60, 20, GREEN);
+            DrawText(TextFormat("F - Enable/disable lighting shader"), 20, 80, 20, GREEN);
+            DrawText(TextFormat("G - Enable/disable pixelizer shader"), 20, 100, 20, GREEN);
         }
         EndDrawing();
     }

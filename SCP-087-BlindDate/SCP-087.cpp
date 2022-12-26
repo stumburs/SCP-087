@@ -65,7 +65,7 @@ int main(void)
     int screen_width = 640;
     int screen_height = 360;
 
-    SetConfigFlags(FLAG_VSYNC_HINT);
+    //SetConfigFlags(FLAG_VSYNC_HINT);
     SetConfigFlags(FLAG_MSAA_4X_HINT);  // Enable Multi Sampling Anti Aliasing 4x (if available)
     InitWindow(screen_width, screen_height, "SCP-087");
     int current_monitor = GetCurrentMonitor();
@@ -133,7 +133,7 @@ int main(void)
 
     SetCameraMode(camera, CAMERA_FIRST_PERSON);  // Set an orbital camera mode
 
-    SetTargetFPS(60);                       // Set our game to run at 60 frames-per-second
+    SetTargetFPS(120);                       // Set our game to run at 60 frames-per-second
     //--------------------------------------------------------------------------------------
 
     // Main game loop

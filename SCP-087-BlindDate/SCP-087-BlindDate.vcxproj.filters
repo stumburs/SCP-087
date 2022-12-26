@@ -15,7 +15,7 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="SCP-087-BlindDate.cpp">
+    <ClCompile Include="SCP-087.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>

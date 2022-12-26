@@ -127,7 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="SCP-087-BlindDate.cpp" />
+    <ClCompile Include="SCP-087.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

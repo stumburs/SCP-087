@@ -67,7 +67,7 @@ int main(void)
 
     SetConfigFlags(FLAG_VSYNC_HINT);
     SetConfigFlags(FLAG_MSAA_4X_HINT);  // Enable Multi Sampling Anti Aliasing 4x (if available)
-    InitWindow(screen_width, screen_height, "SCP-087 Blind Date");
+    InitWindow(screen_width, screen_height, "SCP-087");
     int current_monitor = GetCurrentMonitor();
     screen_width = GetMonitorWidth(current_monitor);
     screen_height = GetMonitorHeight(current_monitor);

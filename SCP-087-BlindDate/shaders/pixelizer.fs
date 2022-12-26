@@ -14,11 +14,11 @@ out vec4 finalColor;
 // NOTE: Add here your custom variables
 
 // NOTE: Render size values must be passed from code
-const float renderWidth = 800;
-const float renderHeight = 450;
+const float renderWidth = 1920;
+const float renderHeight = 1080;
 
-uniform float pixelWidth = 5.0;
-uniform float pixelHeight = 5.0;
+uniform float pixelWidth = 10.0;
+uniform float pixelHeight = 10.0;
 
 void main()
 {

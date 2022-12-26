@@ -56,6 +56,7 @@ void RenderMultipleChunks(const float& camera_x, Model& floor, Model& wall, Mode
 }
 
 float step_pitch, step_volume;
+bool pixelizer_shader_enabled = true;
 
 int main(void)
 {
@@ -161,9 +162,9 @@ int main(void)
 
         // Check key inputs to enable/disable lights
         if (IsKeyPressed(KEY_F))
-        {
             lights[0].enabled = !lights[0].enabled;
-        }
+        if (IsKeyPressed(KEY_G))
+            pixelizer_shader_enabled = !pixelizer_shader_enabled;
 
         // Walking sounds
         if ((IsKeyDown(KEY_W) || IsKeyDown(KEY_A) || IsKeyDown(KEY_S) || IsKeyDown(KEY_D)) && !IsSoundPlaying(step))
@@ -209,11 +210,14 @@ int main(void)
         BeginDrawing();
         {
             ClearBackground(BLACK);
-            BeginShaderMode(pixelizer_shader);
+            if (pixelizer_shader_enabled)
+                BeginShaderMode(pixelizer_shader);
                 DrawTextureRec(target.texture, { 0, 0, (float)target.texture.width, (float)-target.texture.height }, { 0, 0 }, WHITE);
             EndShaderMode();
             DrawFPS(10, 10);
             DrawText(TextFormat("x%f y%f z%f", camera.position.x, camera.position.y, camera.position.z), 20, 40, 20, GREEN);
+            DrawText(TextFormat("F - Enable/disable lighting shader"), 20, 60, 20, GREEN);
+            DrawText(TextFormat("G - Enable/disable pixelizer shader"), 20, 80, 20, GREEN);
         }
         EndDrawing();
     }

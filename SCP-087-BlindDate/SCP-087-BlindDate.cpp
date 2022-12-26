@@ -62,8 +62,6 @@ int main(void)
 {
     // Initialization
     //--------------------------------------------------------------------------------------
-    /*const int screenWidth = 1280;
-    const int screenHeight = 720;*/
     int screen_width = 640;
     int screen_height = 360;
 

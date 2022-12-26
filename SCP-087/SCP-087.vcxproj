@@ -22,7 +22,7 @@
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
     <ProjectGuid>{c480ec03-0008-4f1e-8492-2226cc786f71}</ProjectGuid>
-    <RootNamespace>SCP087BlindDate</RootNamespace>
+    <RootNamespace>SCP087</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>SCP-087</ProjectName>
   </PropertyGroup>

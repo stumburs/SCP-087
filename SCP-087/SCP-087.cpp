@@ -13,6 +13,7 @@ float Map(float n, float start1, float stop1, float start2, float stop2)
 Texture2D brick_texture;
 Texture2D concrete_texture;
 Texture2D black_rock_texture;
+Texture2D face087;
 Shader light_shader;
 Shader pixelizer_shader;
 Shader bloom_shader;
@@ -69,6 +70,10 @@ bool depth_reached_20 = false;
 bool depth_reached_30 = false;
 bool depth_reached_40 = false;
 
+bool face_visible = false;
+bool face_stopped = false;
+Vector3 face_pos = { 0 };
+
 int main(void)
 {
     // Initialization
@@ -97,6 +102,7 @@ int main(void)
     brick_texture = LoadTexture("textures/brick.png");
     concrete_texture = LoadTexture("textures/concrete.png");
     black_rock_texture = LoadTexture("textures/black_rock.png");
+    face087 = LoadTexture("textures/face087.png");
     light_shader = LoadShader("shaders/lighting.vs", "shaders/fog.fs");
     pixelizer_shader = LoadShader(0, "shaders/pixelizer.fs");
     bloom_shader = LoadShader(0, "shaders/overdraw.fs");
@@ -109,6 +115,8 @@ int main(void)
     InitAudioDevice();
     Sound step = LoadSound("sounds/step_reverb.wav");
     Music bg = LoadMusicStream("sounds/bg_short.mp3");
+    Music cry = LoadMusicStream("sounds/cry.mp3");
+    Music whispering = LoadMusicStream("sounds/whispering.mp3");
 
     // Floor piece
     Model floor = LoadModelFromMesh(GenMeshCube(0.5f, 0.5f, 3.0f));
@@ -181,42 +189,49 @@ int main(void)
             fogDensity = Map(camera.position.x, 0, 1000, 0.04f, 0.7f);
         SetShaderValue(light_shader, fogDensityLoc, &fogDensity, SHADER_UNIFORM_FLOAT);
 
-        if (camera.position.x > 100)
+        if (camera.position.x > 1000)
         {
-            bg_volume = 3.0f;
+            bg_volume = 1.0f;
         }
         else
-            bg_volume = Map(camera.position.x, 0, 100, 0.0f, 3.0f);
+            bg_volume = Map(camera.position.x, 0, 1000, 0.0f, 1.0f);
         SetMusicVolume(bg, bg_volume);
 
-        /*if (max_depth > 10.0f && !depth_reached_10)
+        if (max_depth > 10.0f && !depth_reached_10)
         {
-            lights[0].color.r += 2;
-            lights[0].color.g -= 2;
-            lights[0].color.b -= 2;
-            depth_reached_10 = true;
+            // Background sound
+            UpdateMusicStream(cry);
+            if (!IsMusicStreamPlaying(cry))
+            {
+                SetMusicVolume(cry, 1.0f);
+                PlayMusicStream(cry);
+            }
+            //depth_reached_10 = true;
         }
+        
         if (max_depth > 20.0f && !depth_reached_20)
         {
-            lights[0].color.r += 2;
-            lights[0].color.g -= 2;
-            lights[0].color.b -= 2;
-            depth_reached_20 = true;
+            // Background sound
+            UpdateMusicStream(whispering);
+            if (!IsMusicStreamPlaying(whispering))
+            {
+                SetMusicVolume(whispering, 0.2f);
+                PlayMusicStream(whispering);
+            }
+            //depth_reached_20 = true;
         }
         if (max_depth > 30.0f && !depth_reached_30)
         {
-            lights[0].color.r += 2;
-            lights[0].color.g -= 2;
-            lights[0].color.b -= 2;
+            face_visible = true;
             depth_reached_30 = true;
         }
-        if (max_depth > 40.0f && !depth_reached_40)
+        // Face
+        if (face_visible && !face_stopped)
         {
-            lights[0].color.r += 2;
-            lights[0].color.g -= 2;
-            lights[0].color.b -= 2;
-            depth_reached_40 = true;
-        }*/
+            face_pos = { camera.position.x - 2.0f, 0 + camera.position.y + 2.0f, 0.0f };
+        }
+        if (camera.target.x < camera.position.x)
+            face_stopped = true;
 
         // Update the shader with the camera view vector (points towards { 0.0f, 0.0f, 0.0f })
         float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
@@ -227,6 +242,10 @@ int main(void)
             lights[0].enabled = !lights[0].enabled;
         if (IsKeyPressed(KEY_G))
             pixelizer_shader_enabled = !pixelizer_shader_enabled;
+        if (IsKeyPressed(KEY_H))
+            face_visible = !face_visible;
+        if (IsKeyPressed(KEY_J))
+            face_stopped = false;
 
         // Walking sounds
         if ((IsKeyDown(KEY_W) || IsKeyDown(KEY_A) || IsKeyDown(KEY_S) || IsKeyDown(KEY_D)) && !IsSoundPlaying(step))
@@ -252,32 +271,58 @@ int main(void)
         }
         //----------------------------------------------------------------------------------
 
-        // Rendertexture pass 1
+        // Rendertexture pass 1 (main geometry)
         BeginTextureMode(target);       // Enable drawing to texture
+        {
             ClearBackground(BLACK);  // Clear texture background
-                BeginMode3D(camera);        // Begin 3d mode drawing
-
-                    RenderMultipleChunks(camera.position.x, floor, wall, ceiling);
-
-                    // Back wall
-                    DrawModel(back_wall, { -5.75f, 10.0f + camera.position.x, 0.0f }, 1.0f, WHITE);
-            
-                EndMode3D();
+            if (pixelizer_shader_enabled)
+                BeginShaderMode(pixelizer_shader);
+            BeginMode3D(camera);        // Begin 3d mode drawing
+            {
+                RenderMultipleChunks(camera.position.x, floor, wall, ceiling);
+                DrawModel(back_wall, { -5.75f, 10.0f + camera.position.x, 0.0f }, 1.0f, WHITE);
+            }
+            EndShaderMode();
+            EndMode3D();
+        }
         EndTextureMode();
+
+        // Rendertexture pass 2 (apply pixelizer)
+        BeginTextureMode(target);       // Enable drawing to texture
+        {
+            if (pixelizer_shader_enabled)
+                BeginShaderMode(pixelizer_shader);
+            DrawTextureRec(target.texture, { 0, 0, (float)target.texture.width, (float)-target.texture.height }, { 0, 0 }, WHITE);
+            EndShaderMode();
+        }
+        EndTextureMode();
+
+        //if (face_visible)
+        {
+            // Rendertexture pass (spooky face)
+            BeginTextureMode(target);       // Enable drawing to texture
+            {
+                BeginMode3D(camera);        // Begin 3d mode drawing
+                {
+                    //DrawBillboard(camera, face087, {face_pos.x, face_pos.y, face_pos.z}, 1.0f, {255, 255, 255, 64});
+                    DrawBillboard(camera, face087, { camera.position.x - 1.0f, camera.position.y + 1.0f, 0 }, 1.0f, { 255, 255, 255, 64 });
+                }
+                EndMode3D();
+            }
+            EndTextureMode();
+        }
 
         // Draw final image
         BeginDrawing();
         {
             ClearBackground(BLACK);
-            if (pixelizer_shader_enabled)
-                BeginShaderMode(pixelizer_shader);
-                DrawTextureRec(target.texture, { 0, 0, (float)target.texture.width, (float)-target.texture.height }, { 0, 0 }, WHITE);
-            EndShaderMode();
+            DrawTextureRec(target.texture, { 0, 0, (float)target.texture.width, (float)-target.texture.height }, { 0, 0 }, WHITE);
             DrawFPS(10, 10);
             DrawText(TextFormat("X: %f Y: %f Z: %f", camera.position.x, camera.position.y, camera.position.z), 20, 40, 20, GREEN);
             DrawText(TextFormat("Max depth: %f", max_depth), 20, 60, 20, GREEN);
             DrawText(TextFormat("F - Enable/disable lighting shader"), 20, 80, 20, GREEN);
             DrawText(TextFormat("G - Enable/disable pixelizer shader"), 20, 100, 20, GREEN);
+            DrawText(TextFormat("x-target%f", camera.target.x), 20, 120, 20, GREEN);
         }
         EndDrawing();
     }
